@@ -1,0 +1,122 @@
+---
+title: "Male and female suicide rates"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+The present notebook is presenting some summaries and plots based on the two files from the Gapminder website:
+
+- [Suicide rates for men from WHO (per 100,000 people)](https://spreadsheets.google.com/pub?key=tB8ge4cxd8TL7yIV4ALm5NA&output=xls)
+- [Suicide rates for women from WHO (per 100,000 people)](https://spreadsheets.google.com/pub?key=tUD6kmYmB_Bp85SRdEn1Krg&output=xls)
+
+I converted both files to CSV named suicide_male.csv and suicide_female.csv. I load both the sources into R:
+
+```{r}
+suicide_male <- read.csv("suicide_male.csv", sep = ",")
+```
+
+```{r}
+suicide_female <- read.csv("suicide_female.csv", sep = ",")
+```
+
+The first thing is to print out fragments of the data and some introductory statistics, in order to become acquainted with the datasets:
+
+```{r}
+head(suicide_male)
+```
+
+```{r}
+summary(suicide_male)
+```
+
+```{r}
+head(suicide_female)
+```
+
+```{r}
+summary(suicide_female)
+```
+
+We can see here, that the bulk of both datasets is hardly useful, as there is moderately complete information only for one year: 2004. At the same time, we can see that the list of countries in both files seems to be the same, containing 192 countries beginning with five identical values. I am going to combine the information for this year for both datasets in a separate dataframe, "new", with three columns: country, female, male.
+
+```{r}
+new <- data.frame("country" = suicide_male$Suicide.among.men..per.100.000..age.adjusted,
+                  "female" = suicide_female$X2004,
+                  "male" = suicide_male$X2004)
+```
+
+Next, we print summary of the data:
+
+```{r}
+summary(new)
+```
+
+In the introductory statistics, we already notice, that the mean and median for male suicide is far larger than the mean and median of female suicide, an observation which would go in hand with theoretical observations on suicide by authors such as Emile Durkheim.
+
+To investigate this phenomenon further, let us plot the data:
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+p1 <- ggplot(aes(female), data = new) +
+  geom_histogram(binwidth = 2) +
+  scale_x_continuous(breaks = seq(0, 60, 5), limits = c(0, 60)) +
+  scale_y_continuous(breaks = seq(0, 50, 5), limits = c(0, 50))
+```
+```{r}
+p2 <- ggplot(aes(male), data = new) +
+  geom_histogram(binwidth = 2) +
+  scale_x_continuous(breaks = seq(0, 60, 5), limits = c(0, 60)) +
+  scale_y_continuous(breaks = seq(0, 50, 5), limits = c(0, 50))
+```
+
+```{r}
+library(gridExtra)
+```
+
+```{r}
+grid.arrange(p1, p2, ncol = 1)
+```
+
+I specified explicitly both the axes, in order to be able to see the exact differences between the two distributions. The differences are apparent. The female distribution peaks at around 4 suicides per 1,000 people and is strongly right-skewed. The male distribution is much more dispersed, with two visible peaks: at around 6 suicides, and around 14 suicides per 1,000 people. The higher counts of suicide, giong up to almost 60 suicides per 1,000 people, are present only in the male distribution.
+
+The above observations could be gleamed from the summaries of the data as well, and as such, are not particularly revealing.
+
+What could bring some clarity on the relation between these two counts could be Pearson's correlation.
+
+```{r}
+with(new, cor.test(male, female))
+```
+
+Pearson't correlation between the two counts stands at 0.58, which marks quite a significant correlation.  While I might be mistaken (the dataset is quite unlike the other sets I have been working on, in its delimited information), this might indicate, that higher female suicide rate indicates higher male suicide rate. Let us follow this trope, and plot the two variables against each other:
+
+```{r}
+ggplot(aes(x = male, y = female), data = new) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm")
+```
+
+The scatterplot does indeed indicate a definite relation between the two.  While the male suicide rate is generally higher than female suicide rate, high percentage of one indicates high percentage of the other.
+
+The following are some variations for the plot above, introducing some aesthetic changes:
+
+```{r}
+ggplot(aes(x = male, y = female), data = new) +
+  geom_line()
+```
+
+geom_line appears far less informative than the above visualizations.
+
+```{r}
+ggplot(aes(x = male, y = female), data = new) +
+  geom_point(alpha = 0.5,
+             color = "red") +
+  geom_line(stat = "summary", fun.y = mean, color = "blue")
+  
+```
+
+Pretty much the same informational value, and not very visually impressive...
+
